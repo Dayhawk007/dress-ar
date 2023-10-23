@@ -20,6 +20,12 @@ export default function App() {
 
   const [dressMap,setDressMap] = useState(new Map());
 
+  const [rightShoulders,setRightShoulders]=useState(null)
+  const [leftShoulders,setLeftShoulders]= useState(null)
+  const [leftHips,setLeftHips]=useState(null)
+  const [rightHips,setRightHips]=useState(null)
+
+
   const detectWebcamFeed = async (posenet_model) => {
     if (
       typeof webcamRef.current !== "undefined" &&
@@ -59,18 +65,18 @@ export default function App() {
           const codePositionBottomLeftCorner = code ? code.location.bottomLeftCorner : null;
 
           const codePositionTopLeftCorner = code ? code.location.topLeftCorner : null;
-        
-          for(const validPose in poseState){
-            const rightShoulder= poseState[validPose]["keypoints"][6]["position"]
-            const leftShoulder= poseState[validPose]["keypoints"][5]["position"]
-            const leftHip= poseState[validPose]["keypoints"][11]["position"]
-            const rightHip= poseState[validPose]["keypoints"][12]["position"]
 
-            console.log(code);
 
-            if(code && code.data!="" && code.data!=null && code.data!=lastScannedQR){
+          if(poseState && poseState!=null){
+            for(var i=0;i<poseState.length;i++){
+
               
-              setScannedQRs((prevQRs) => [code.data,...prevQRs]);
+            
+
+            if(code && code.data!="" && code.data!=null && poseState[i]["keypoints"][5]["position"]["x"]>=codePositionTopLeftCorner.x && poseState[i]["keypoints"][6]["position"]["x"]<=codePositionTopRightCorner.x ){
+              
+              console.log("CHECK")
+              setDressMap(dressMap.set(code.data,poseState[i]));
               setLastScannedQR(code.data);
 
               const qrCodeCanvas = qrCanvasRef.current;
@@ -89,6 +95,9 @@ export default function App() {
               context.closePath();
               context.stroke();
 
+              context.font = "16px Arial";
+              context.fillStyle = 'green';
+              context.fillText(code.data, code.location.topRightCorner.x, code.location.topRightCorner.y - 5);
             }
             else{
               const qrCodeCanvas = qrCanvasRef.current;
@@ -97,7 +106,7 @@ export default function App() {
               qrCodeCanvas.height = 0;
             }
           }
-          
+        }
         
       }
       const validPoses=[];
@@ -108,12 +117,18 @@ export default function App() {
       }
       if(validPoses.length>0){
         setPoseState(validPoses);
+        setRightShoulders(validPoses.map((pose)=>pose["keypoints"][6]["position"]));
+        setLeftShoulders(validPoses.map((pose)=>pose["keypoints"][5]["position"]));
+        setLeftHips(validPoses.map((pose)=>pose["keypoints"][11]["position"]));
+        setRightHips(validPoses.map((pose)=>pose["keypoints"][12]["position"]));
       }
       for(const pose of poses){
         drawResult(pose, videoWidth, videoHeight);
       }
     }
   };
+
+
 
 
 
