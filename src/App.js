@@ -1,12 +1,12 @@
 import React, { useEffect, useRef,useState } from "react";
 import * as posenet from "@tensorflow-models/posenet";
-import * as THREE from "three";
+import ClothTest from "./components/ClothTest";
 import WebcamComponent from "./components/WebCam";
 import CanvasComponent from "./components/PoseNet";
 import { drawKeypoints, drawSkeleton } from "./utility/utilities";
 import jsQR from "jsqr";
 import QrCanvas from "./components/QrCanvas";
-
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export default function App() {
   const webcamRef = useRef(null);
@@ -20,10 +20,7 @@ export default function App() {
 
   const [dressMap,setDressMap] = useState(new Map());
 
-  const [rightShoulders,setRightShoulders]=useState(null)
-  const [leftShoulders,setLeftShoulders]= useState(null)
-  const [leftHips,setLeftHips]=useState(null)
-  const [rightHips,setRightHips]=useState(null)
+  const [poseIdMap,setPoseIdMap] = useState(new Map());
 
 
   const detectWebcamFeed = async (posenet_model) => {
@@ -58,48 +55,39 @@ export default function App() {
 
           const code = jsQR(imageData.data, video.videoWidth, video.videoHeight);
 
-          const codePositionTopRightCorner = code ? code.location.topRightCorner : null;
-
-          const codePositionBottomRightCorner = code ? code.location.bottomRightCorner : null;
-
-          const codePositionBottomLeftCorner = code ? code.location.bottomLeftCorner : null;
-
-          const codePositionTopLeftCorner = code ? code.location.topLeftCorner : null;
-
-
-          if(poseState && poseState!=null){
-            for(var i=0;i<poseState.length;i++){
-
-              
+          if(poses!=null){
             
+            for(var i=0;i<poses.length;i++){
 
-            if(code && code.data!="" && code.data!=null && poseState[i]["keypoints"][5]["position"]["x"]>=codePositionTopLeftCorner.x && poseState[i]["keypoints"][6]["position"]["x"]<=codePositionTopRightCorner.x ){
+              setPoseIdMap(poseIdMap.set(i,poses[i]));
               
-              console.log("CHECK")
-              setDressMap(dressMap.set(code.data,poseState[i]));
-              setLastScannedQR(code.data);
+              if(code && poses[i]["keypoints"][5]["score"]>0.7 && poses[i]["keypoints"][6]["score"]>0.7 && scannedQRs.includes(code.data)==false){
+              
+                setScannedQRs([...scannedQRs,code.data]);
 
-              const qrCodeCanvas = qrCanvasRef.current;
-              const context = qrCodeCanvas.getContext("2d");
+                setDressMap(dressMap.set(i,code.data));
 
-              qrCodeCanvas.width = videoWidth;
-              qrCodeCanvas.height = videoHeight;
+                const qrCodeCanvas = qrCanvasRef.current;
+                const context = qrCodeCanvas.getContext("2d");
 
-              context.strokeStyle = 'green';
-              context.lineWidth = 2;
-              context.beginPath();
-              context.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
-              context.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
-              context.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
-              context.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
-              context.closePath();
-              context.stroke();
+                qrCodeCanvas.width = videoWidth;
+                qrCodeCanvas.height = videoHeight;
+
+                context.strokeStyle = 'green';
+                context.lineWidth = 2;
+                context.beginPath();
+                context.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
+                context.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
+                context.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
+                context.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
+                context.closePath();
+                context.stroke();
 
               context.font = "16px Arial";
               context.fillStyle = 'green';
               context.fillText(code.data, code.location.topRightCorner.x, code.location.topRightCorner.y - 5);
             }
-            else{
+            else if(code==null || code==undefined){
               const qrCodeCanvas = qrCanvasRef.current;
               const context = qrCodeCanvas.getContext("2d");
               qrCodeCanvas.width = 0;
@@ -108,19 +96,6 @@ export default function App() {
           }
         }
         
-      }
-      const validPoses=[];
-      for(const pose of poses){
-        if(pose["keypoints"][5]["score"]>0.7 && pose["keypoints"][6]["score"]>0.7){
-          validPoses.push(pose);
-        }
-      }
-      if(validPoses.length>0){
-        setPoseState(validPoses);
-        setRightShoulders(validPoses.map((pose)=>pose["keypoints"][6]["position"]));
-        setLeftShoulders(validPoses.map((pose)=>pose["keypoints"][5]["position"]));
-        setLeftHips(validPoses.map((pose)=>pose["keypoints"][11]["position"]));
-        setRightHips(validPoses.map((pose)=>pose["keypoints"][12]["position"]));
       }
       for(const pose of poses){
         drawResult(pose, videoWidth, videoHeight);
@@ -151,7 +126,7 @@ export default function App() {
 
       setInterval(() => {
         detectWebcamFeed(posenet_model);
-      }, 100);
+      }, 10);
     };
     runPosenet();
   }, []);
@@ -165,6 +140,7 @@ export default function App() {
             <WebcamComponent webcamRef={webcamRef} />
             <CanvasComponent canvasRef={canvasRef} />
             <QrCanvas qrCanvasRef={qrCanvasRef}/>
+            <ClothTest />
           </div>
           <div className="flex flex-row items-end w-full">
             <div className="flex flex-col w-full">
