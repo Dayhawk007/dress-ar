@@ -7,11 +7,14 @@ import { drawKeypoints, drawSkeleton } from "./utility/utilities";
 import jsQR from "jsqr";
 import QrCanvas from "./components/QrCanvas";
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import * as THREE from 'three';
+import ClothThreeFiber from "./components/ClothThreeFiber";
 
 export default function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const qrCanvasRef = useRef(null);
+  const clothContainerRef = useRef(null);
 
   const [scannedQRs, setScannedQRs] = useState([]);
   const [lastScannedQR, setLastScannedQR] = useState(null);
@@ -22,8 +25,13 @@ export default function App() {
 
   const [poseIdMap,setPoseIdMap] = useState(new Map());
 
+  const [distanceBetweenShoulders,setDistanceBetweenShoulders] = useState(0);
 
-  const detectWebcamFeed = async (posenet_model) => {
+  const [rightShoulder,setRightShoulder] = useState(null);
+
+  const [leftShoulder,setLeftShoulder] = useState(null);
+
+  const detectWebcamFeed = async (posenet_model,scene) => {
     if (
       typeof webcamRef.current !== "undefined" &&
       webcamRef.current !== null &&
@@ -31,6 +39,7 @@ export default function App() {
     ) {
       const video = webcamRef.current.video;
       
+
       
       const videoWidth = video.videoWidth;
       const videoHeight = video.videoHeight;
@@ -57,9 +66,26 @@ export default function App() {
 
           if(poses!=null){
             
+            setPoseIdMap(new Map());
+
             for(var i=0;i<poses.length;i++){
 
               setPoseIdMap(poseIdMap.set(i,poses[i]));
+
+              const poseToTest=poses[i];
+
+              if(poseToTest["keypoints"][5]["score"]>0.7 && poseToTest["keypoints"][6]["score"]>0.7){
+                  const distanceBetweenShoulders=poseToTest["keypoints"][5]["position"]["x"]-poseToTest["keypoints"][6]["position"]["x"];                  
+                  console.log(distanceBetweenShoulders);
+                  setDistanceBetweenShoulders(distanceBetweenShoulders);
+                  const rightShoulder=poseToTest["keypoints"][6]["position"];
+                  setRightShoulder(rightShoulder);
+                  const leftShoulder=poseToTest["keypoints"][5]["position"];
+                  setLeftShoulder(leftShoulder);
+                  console.log(rightShoulder);
+                  console.log(leftShoulder);
+
+              }
               
               if(code && poses[i]["keypoints"][5]["score"]>0.7 && poses[i]["keypoints"][6]["score"]>0.7 && scannedQRs.includes(code.data)==false){
               
@@ -93,7 +119,18 @@ export default function App() {
               qrCodeCanvas.width = 0;
               qrCodeCanvas.height = 0;
             }
+            if(dressMap.has(i) && !poseIdMap.has(i)){
+              dressMap.delete(i);
+            }
           }
+        }
+
+        if(dressMap.has(i)){
+          const loader = new GLTFLoader();
+          loader.load(dressMap.get(i), function(gltf){
+            gltf.scene.scale.set(0.5,0.5,0.5);
+            scene.add(gltf.scene);
+          });
         }
         
       }
@@ -118,6 +155,29 @@ export default function App() {
 
   useEffect(() => {
 
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, 640 / 480, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true , alpha: true});
+
+    // Set the renderer size
+    renderer.setSize(640, 480);
+
+    // Set the canvas style
+    renderer.domElement.style.position = "absolute";
+    renderer.domElement.style.marginLeft = "25%";
+    renderer.domElement.style.marginTop = "5%";
+    renderer.domElement.style.left = 0;
+    renderer.domElement.style.textAlign = "center";
+    renderer.domElement.style.zIndex = 9;
+
+    renderer.setClearColor(0x000000, 0);
+
+    // Append the renderer's canvas to the container
+    clothContainerRef.current.appendChild(renderer.domElement);
+
+    // Position the camera
+    camera.position.z = 5;
+
     const runPosenet = async () => {
       const posenet_model = await posenet.load({
         inputResolution: { width: 640, height: 480 },
@@ -125,7 +185,7 @@ export default function App() {
       });
 
       setInterval(() => {
-        detectWebcamFeed(posenet_model);
+        detectWebcamFeed(posenet_model,scene);
       }, 10);
     };
     runPosenet();
@@ -137,10 +197,13 @@ export default function App() {
         <h1 className="text-4xl font-bold z-10 text-white text-center">Dress AR Demo</h1>
         <div className="flex flex-row items-center justify-center">
           <div className="w-[640px] h-[480px]">
-            <WebcamComponent webcamRef={webcamRef} />
-            <CanvasComponent canvasRef={canvasRef} />
-            <QrCanvas qrCanvasRef={qrCanvasRef}/>
-            <ClothTest />
+            <WebcamComponent className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" webcamRef={webcamRef} />
+            <CanvasComponent className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" canvasRef={canvasRef} />
+            <QrCanvas className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" qrCanvasRef={qrCanvasRef}/>
+            <div className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]"> 
+              <ClothThreeFiber eyeDistance={distanceBetweenShoulders} leftShoulder={leftShoulder} rightShoulder={rightShoulder} pose={poseState?poseState[0]:{}} />
+            </div>
+            <div ref={clothContainerRef} />
           </div>
           <div className="flex flex-row items-end w-full">
             <div className="flex flex-col w-full">
