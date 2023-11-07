@@ -31,6 +31,10 @@ export default function App() {
 
   const [leftShoulder,setLeftShoulder] = useState(null);
 
+  const [leftWaist,setLeftWaist] = useState(null);
+
+  const [rightWaist,setRightWaist] = useState(null);
+
   const detectWebcamFeed = async (posenet_model,scene) => {
     if (
       typeof webcamRef.current !== "undefined" &&
@@ -46,6 +50,7 @@ export default function App() {
       video.width = videoWidth;
       video.height = videoHeight;
       const poses = await posenet_model.estimateMultiplePoses(video);
+
       if(poses!=null){
 
         const canvas=canvasRef.current;
@@ -82,10 +87,16 @@ export default function App() {
                   setRightShoulder(rightShoulder);
                   const leftShoulder=poseToTest["keypoints"][5]["position"];
                   setLeftShoulder(leftShoulder);
-                  console.log(rightShoulder);
-                  console.log(leftShoulder);
-
               }
+
+              if(poseToTest["keypoints"][11]["score"]>0.7 && poseToTest["keypoints"][12]["score"]>0.7){
+                const leftWaist=poseToTest["keypoints"][11]["position"];
+                setLeftWaist(leftWaist);
+                const rightWaist=poseToTest["keypoints"][12]["position"];
+                setRightWaist(rightWaist);
+              }
+
+              setPoseState(poses);
               
               if(code && poses[i]["keypoints"][5]["score"]>0.7 && poses[i]["keypoints"][6]["score"]>0.7 && scannedQRs.includes(code.data)==false){
               
@@ -195,13 +206,13 @@ export default function App() {
     <div className="App">
       <header className="App-header">
         <h1 className="text-4xl font-bold z-10 text-white text-center">Dress AR Demo</h1>
-        <div className="flex flex-row items-center justify-center">
-          <div className="w-[640px] h-[480px]">
+        <div className="flex flex-col items-center justify-center">
+          <div className=" flex flex-col w-screen h-screen">
             <WebcamComponent className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" webcamRef={webcamRef} />
             <CanvasComponent className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" canvasRef={canvasRef} />
             <QrCanvas className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" qrCanvasRef={qrCanvasRef}/>
             <div className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]"> 
-              <ClothThreeFiber eyeDistance={distanceBetweenShoulders} leftShoulder={leftShoulder} rightShoulder={rightShoulder} pose={poseState?poseState[0]:{}} />
+              <ClothThreeFiber eyeDistance={distanceBetweenShoulders} leftShoulder={leftShoulder} rightShoulder={rightShoulder} leftWaist={leftWaist} rightWaist={rightWaist} pose={poseState?poseState[0]:{}} />
             </div>
             <div ref={clothContainerRef} />
           </div>

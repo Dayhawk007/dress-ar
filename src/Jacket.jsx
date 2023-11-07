@@ -11,6 +11,11 @@ import { Vector3, Matrix4 } from 'three';
 export function Model(props) {
   const { scene,nodes, materials } = useGLTF('jacket1.glb')
 
+  const skeleton=nodes.Wolf3D_Outfit_Top.skeleton;
+
+  const bones=nodes.Wolf3D_Outfit_Top.skeleton.bones;
+  
+  console.log("bones",bones);
   const jacketRef = useRef();
 
 //  console.log("nodes",nodes);
