@@ -1,6 +1,5 @@
 import React, { useEffect, useRef,useState } from "react";
 import * as posenet from "@tensorflow-models/posenet";
-import ClothTest from "./components/ClothTest";
 import WebcamComponent from "./components/WebCam";
 import CanvasComponent from "./components/PoseNet";
 import { drawKeypoints, drawSkeleton } from "./utility/utilities";
@@ -8,13 +7,11 @@ import jsQR from "jsqr";
 import QrCanvas from "./components/QrCanvas";
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
-import ClothThreeFiber from "./components/ClothThreeFiber";
 
 export default function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const qrCanvasRef = useRef(null);
-  const clothContainerRef = useRef(null);
 
   const [scannedQRs, setScannedQRs] = useState([]);
   const [lastScannedQR, setLastScannedQR] = useState(null);
@@ -183,8 +180,6 @@ export default function App() {
 
     renderer.setClearColor(0x000000, 0);
 
-    // Append the renderer's canvas to the container
-    clothContainerRef.current.appendChild(renderer.domElement);
 
     // Position the camera
     camera.position.z = 5;
@@ -211,10 +206,6 @@ export default function App() {
             <WebcamComponent className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" webcamRef={webcamRef} />
             <CanvasComponent className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" canvasRef={canvasRef} />
             <QrCanvas className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]" qrCanvasRef={qrCanvasRef}/>
-            <div className="absolute ml-[25%] mt-[5%] left-0 text-center z-9 w-[640px] h-[480px]"> 
-              <ClothThreeFiber eyeDistance={distanceBetweenShoulders} leftShoulder={leftShoulder} rightShoulder={rightShoulder} leftWaist={leftWaist} rightWaist={rightWaist} pose={poseState?poseState[0]:{}} />
-            </div>
-            <div ref={clothContainerRef} />
           </div>
           <div className="flex flex-row items-end w-full">
             <div className="flex flex-col w-full">
